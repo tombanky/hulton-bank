@@ -37,29 +37,7 @@ export default function DashboardPage() {
         setTransactions([]);
       }
     } else {
-      const demoTransactions: Transaction[] = [
-        {
-          title: "Demo Direct Deposit",
-          date: "Today",
-          amount: 100000,
-          type: "credit",
-          description: "Prototype transaction",
-        },
-        {
-          title: "Demo Opening Deposit",
-          date: "Today",
-          amount: 250000,
-          type: "credit",
-          description: "Prototype transaction",
-        },
-      ];
-
-      localStorage.setItem(
-        "hulton_transactions",
-        JSON.stringify(demoTransactions)
-      );
-
-      setTransactions(demoTransactions);
+      setTransactions([]);
     }
 
     if (savedNotifications) {
@@ -448,13 +426,6 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
-          </div>
-
-          <div className="mt-8 rounded-2xl border border-blue-100 bg-blue-50/80 p-5">
-            <p className="text-sm leading-6 text-slate-600">
-              Demo account for testing the Hulton Bank prototype. Balances and
-              transactions shown here are sample data, not verified bank records.
-            </p>
           </div>
         </section>
       </div>

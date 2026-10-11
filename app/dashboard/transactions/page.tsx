@@ -11,51 +11,34 @@ type Transaction = {
   description?: string;
 };
 
-const DEMO_TRANSACTIONS: Transaction[] = [
-  {
-    title: "Demo Direct Deposit",
-    date: "Today",
-    amount: 100000,
-    type: "credit",
-    description: "Prototype transaction",
-  },
-  {
-    title: "Demo Opening Deposit",
-    date: "Today",
-    amount: 250000,
-    type: "credit",
-    description: "Prototype transaction",
-  },
-];
-
 export default function TransactionsPage() {
-  const [transactions, setTransactions] =
-    useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] =
-    useState<"all" | "income" | "spending">("all");
+  const [filter, setFilter] = useState<"all" | "income" | "spending">("all");
 
   useEffect(() => {
-    const savedTransactions = localStorage.getItem(
-      "hulton_transactions"
-    );
+    const saved = localStorage.getItem("hulton_transactions");
 
-    if (savedTransactions) {
+    if (saved) {
       try {
-        setTransactions(JSON.parse(savedTransactions));
+        const parsed = JSON.parse(saved);
+
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed.map((transaction: Transaction) => ({
+            ...transaction,
+            title: transaction.title.replace(/^Demo\s+/i, "").trim(),
+            description:
+              transaction.description === "Prototype transaction"
+                ? undefined
+                : transaction.description,
+          }));
+
+          setTransactions(cleaned);
+          localStorage.setItem("hulton_transactions", JSON.stringify(cleaned));
+        }
       } catch {
-        setTransactions(DEMO_TRANSACTIONS);
-        localStorage.setItem(
-          "hulton_transactions",
-          JSON.stringify(DEMO_TRANSACTIONS)
-        );
+        setTransactions([]);
       }
-    } else {
-      setTransactions(DEMO_TRANSACTIONS);
-      localStorage.setItem(
-        "hulton_transactions",
-        JSON.stringify(DEMO_TRANSACTIONS)
-      );
     }
   }, []);
 
@@ -79,9 +62,7 @@ export default function TransactionsPage() {
 
       const matchesSearch =
         transaction.title.toLowerCase().includes(query) ||
-        (transaction.description ?? "")
-          .toLowerCase()
-          .includes(query);
+        (transaction.description ?? "").toLowerCase().includes(query);
 
       const matchesFilter =
         filter === "all" ||
@@ -97,10 +78,7 @@ export default function TransactionsPage() {
       <header className="border-b border-white/20 bg-white/95 backdrop-blur-md">
         <div className="mx-auto max-w-7xl px-6">
           <div className="flex h-20 items-center justify-between">
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-3"
-            >
+            <Link href="/dashboard" className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-lg font-bold text-white shadow-sm">
                 H
               </div>
@@ -144,21 +122,15 @@ export default function TransactionsPage() {
               <p className="mt-4 text-2xl font-bold text-slate-900">
                 {transactions.length}
               </p>
-              <p className="mt-1 text-xs text-slate-500">
-                Recorded activity
-              </p>
+              <p className="mt-1 text-xs text-slate-500">Recorded activity</p>
             </div>
 
             <div className="rounded-2xl border border-white/70 bg-white/95 p-6 shadow-lg">
-              <p className="text-sm font-medium text-slate-500">
-                Total Income
-              </p>
+              <p className="text-sm font-medium text-slate-500">Total Income</p>
               <p className="mt-4 text-2xl font-bold text-green-600">
                 +${formatMoney(totalIncome)}
               </p>
-              <p className="mt-1 text-xs text-slate-500">
-                Money received
-              </p>
+              <p className="mt-1 text-xs text-slate-500">Money received</p>
             </div>
 
             <div className="rounded-2xl border border-white/70 bg-white/95 p-6 shadow-lg">
@@ -168,9 +140,7 @@ export default function TransactionsPage() {
               <p className="mt-4 text-2xl font-bold text-red-600">
                 -${formatMoney(totalSpending)}
               </p>
-              <p className="mt-1 text-xs text-slate-500">
-                Money spent
-              </p>
+              <p className="mt-1 text-xs text-slate-500">Money spent</p>
             </div>
           </div>
 
@@ -183,35 +153,31 @@ export default function TransactionsPage() {
                 <input
                   type="text"
                   value={search}
-                  onChange={(event) =>
-                    setSearch(event.target.value)
-                  }
+                  onChange={(event) => setSearch(event.target.value)}
                   placeholder="Search transactions..."
                   className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-11 pr-4 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 />
               </div>
 
               <div className="flex rounded-xl bg-slate-100 p-1">
-                {(["all", "income", "spending"] as const).map(
-                  (option) => (
-                    <button
-                      key={option}
-                      type="button"
-                      onClick={() => setFilter(option)}
-                      className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                        filter === option
-                          ? "bg-white text-blue-600 shadow-sm"
-                          : "text-slate-500 hover:text-slate-900"
-                      }`}
-                    >
-                      {option === "all"
-                        ? "All"
-                        : option === "income"
-                          ? "Income"
-                          : "Spending"}
-                    </button>
-                  )
-                )}
+                {(["all", "income", "spending"] as const).map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setFilter(option)}
+                    className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                      filter === option
+                        ? "bg-white text-blue-600 shadow-sm"
+                        : "text-slate-500 hover:text-slate-900"
+                    }`}
+                  >
+                    {option === "all"
+                      ? "All"
+                      : option === "income"
+                        ? "Income"
+                        : "Spending"}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
@@ -270,8 +236,7 @@ export default function TransactionsPage() {
                             isCredit ? "text-green-600" : "text-red-600"
                           }`}
                         >
-                          {isCredit ? "+" : "-"}$
-                          {formatMoney(transaction.amount)}
+                          {isCredit ? "+" : "-"}${formatMoney(transaction.amount)}
                         </p>
                         <p className="mt-1 text-xs font-medium text-slate-400">
                           {isCredit ? "Credit" : "Debit"}
@@ -315,13 +280,6 @@ export default function TransactionsPage() {
             >
               Dashboard
             </Link>
-          </div>
-
-          <div className="mt-6 rounded-2xl border border-blue-100 bg-blue-50/80 p-5">
-            <p className="text-sm leading-6 text-slate-600">
-              Demo transaction history for testing the Hulton Bank prototype.
-              These entries are sample data, not verified bank records.
-            </p>
           </div>
         </section>
       </div>
