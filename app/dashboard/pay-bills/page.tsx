@@ -1,6 +1,8 @@
 "use client";
+
 import { FormEvent, useState } from "react";
 import Link from "next/link";
+
 type Notification = {
   id: number;
   title: string;
@@ -9,6 +11,7 @@ type Notification = {
   type: "deposit" | "transfer" | "bill" | "security";
   read: boolean;
 };
+
 const billers = [
   "Electric Company",
   "Water & Utilities",
@@ -21,6 +24,7 @@ const billers = [
   "Credit Card",
   "Other",
 ];
+
 export default function PayBillsPage() {
   const [biller, setBiller] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
@@ -28,55 +32,84 @@ export default function PayBillsPage() {
   const [description, setDescription] = useState("");
   const [message, setMessage] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
+
   const formatMoney = (value: number) =>
     value.toLocaleString("en-US", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
     setMessage("");
     setIsSuccess(false);
+
     const billAmount = Number(amount);
+
     if (!biller) {
       setMessage("Please select a biller.");
       return;
     }
+
     if (!accountNumber.trim()) {
       setMessage("Please enter the biller account number.");
       return;
     }
-    if (!amount || billAmount <= 0) {
+
+    if (!amount || !Number.isFinite(billAmount) || billAmount <= 0) {
       setMessage("Please enter a valid amount.");
       return;
     }
+
     const currentBalance = Number(
-      localStorage.getItem("hulton_balance") || "300000"
+      localStorage.getItem("hulton_balance") ?? "400000"
     );
+
     const currentChecking = Number(
-      localStorage.getItem("hulton_checking") || "250000"
+      localStorage.getItem("hulton_checking") ?? "350000"
     );
+
     const currentSavings = Number(
-      localStorage.getItem("hulton_savings") || "50000"
+      localStorage.getItem("hulton_savings") ?? "50000"
     );
+
+    if (
+      !Number.isFinite(currentBalance) ||
+      !Number.isFinite(currentChecking) ||
+      !Number.isFinite(currentSavings)
+    ) {
+      setMessage("Unable to read your account balances. Please refresh and try again.");
+      return;
+    }
+
     if (billAmount > currentChecking) {
       setMessage(
         "This payment exceeds your available checking balance."
       );
       return;
     }
+
     const newBalance = currentBalance - billAmount;
     const newChecking = currentChecking - billAmount;
+
     const savedTransactions =
       localStorage.getItem("hulton_transactions");
+
     let transactions = [];
+
     if (savedTransactions) {
       try {
         transactions = JSON.parse(savedTransactions);
+
+        if (!Array.isArray(transactions)) {
+          transactions = [];
+        }
       } catch {
         transactions = [];
       }
     }
+
     const newTransaction = {
       title: `Bill Payment - ${biller}`,
       date: "Today",
@@ -85,38 +118,52 @@ export default function PayBillsPage() {
       description:
         description.trim() || `Payment to ${biller}`,
     };
+
     const updatedTransactions = [
       newTransaction,
       ...transactions,
     ];
+
     localStorage.setItem(
       "hulton_balance",
       newBalance.toString()
     );
+
     localStorage.setItem(
       "hulton_checking",
       newChecking.toString()
     );
+
     localStorage.setItem(
       "hulton_savings",
       currentSavings.toString()
     );
+
     localStorage.setItem(
       "hulton_transactions",
       JSON.stringify(updatedTransactions)
     );
+
     /* Create notification */
+
     const savedNotifications = localStorage.getItem(
       "hulton_notifications"
     );
+
     let notifications: Notification[] = [];
+
     if (savedNotifications) {
       try {
         notifications = JSON.parse(savedNotifications);
+
+        if (!Array.isArray(notifications)) {
+          notifications = [];
+        }
       } catch {
         notifications = [];
       }
     }
+
     const newNotification: Notification = {
       id: Date.now(),
       title: "Bill payment submitted",
@@ -127,28 +174,35 @@ export default function PayBillsPage() {
       type: "bill",
       read: false,
     };
+
     const updatedNotifications = [
       newNotification,
       ...notifications,
     ];
+
     localStorage.setItem(
       "hulton_notifications",
       JSON.stringify(updatedNotifications)
     );
+
     setIsSuccess(true);
+
     setMessage(
       `Bill payment of $${formatMoney(
         billAmount
       )} was submitted successfully.`
     );
+
     setBiller("");
     setAccountNumber("");
     setAmount("");
     setDescription("");
   };
+
   return (
     <main className="min-h-screen bg-slate-100">
       {/* Header */}
+
       <header className="border-b border-white/20 bg-white/95 backdrop-blur-md">
         <div className="mx-auto max-w-7xl px-6">
           <div className="flex h-20 items-center justify-between">
@@ -159,10 +213,12 @@ export default function PayBillsPage() {
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-lg font-bold text-white shadow-sm">
                 H
               </div>
+
               <span className="text-xl font-bold text-slate-900">
                 Hulton Bank
               </span>
             </Link>
+
             <Link
               href="/dashboard"
               className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
@@ -172,34 +228,45 @@ export default function PayBillsPage() {
           </div>
         </div>
       </header>
+
       {/* Main */}
+
       <div className="relative min-h-[calc(100vh-80px)] overflow-hidden">
         <div className="pointer-events-none absolute -left-32 top-20 h-96 w-96 rounded-full bg-blue-200/40 blur-3xl" />
+
         <div className="pointer-events-none absolute -right-32 top-10 h-[500px] w-[500px] rounded-full bg-indigo-200/40 blur-3xl" />
+
         <section className="relative mx-auto max-w-4xl px-6 py-10">
           {/* Heading */}
+
           <div className="mb-8">
             <p className="text-sm font-semibold text-blue-600">
               Personal Banking
             </p>
+
             <h1 className="mt-1 text-3xl font-bold text-slate-900">
               Pay a Bill
             </h1>
+
             <p className="mt-2 text-slate-600">
               Manage a bill payment from your checking account.
             </p>
           </div>
+
           {/* Form */}
+
           <form
             onSubmit={handleSubmit}
             className="rounded-3xl border border-white/70 bg-white/95 p-6 shadow-xl md:p-8"
           >
             <div className="space-y-6">
               {/* Biller */}
+
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-700">
                   Biller
                 </label>
+
                 <select
                   value={biller}
                   onChange={(event) =>
@@ -210,6 +277,7 @@ export default function PayBillsPage() {
                   <option value="">
                     Select biller
                   </option>
+
                   {billers.map((billerName) => (
                     <option
                       key={billerName}
@@ -220,11 +288,14 @@ export default function PayBillsPage() {
                   ))}
                 </select>
               </div>
+
               {/* Account Number */}
+
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-700">
                   Biller Account Number
                 </label>
+
                 <input
                   type="text"
                   value={accountNumber}
@@ -235,15 +306,19 @@ export default function PayBillsPage() {
                   className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 />
               </div>
+
               {/* Amount */}
+
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-700">
                   Amount
                 </label>
+
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 font-semibold text-slate-500">
                     $
                   </span>
+
                   <input
                     type="number"
                     min="0.01"
@@ -257,14 +332,18 @@ export default function PayBillsPage() {
                   />
                 </div>
               </div>
+
               {/* Description */}
+
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-700">
                   Description
+
                   <span className="ml-1 font-normal text-slate-400">
                     (optional)
                   </span>
                 </label>
+
                 <textarea
                   value={description}
                   onChange={(event) =>
@@ -275,7 +354,9 @@ export default function PayBillsPage() {
                   className="w-full resize-none rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 />
               </div>
+
               {/* Message */}
+
               {message && (
                 <div
                   className={`rounded-xl px-4 py-3 text-sm font-medium ${
@@ -287,7 +368,9 @@ export default function PayBillsPage() {
                   {message}
                 </div>
               )}
+
               {/* Submit */}
+
               <button
                 type="submit"
                 className="w-full rounded-xl bg-blue-600 px-6 py-4 font-semibold text-white shadow-md transition hover:bg-blue-700"
@@ -296,7 +379,9 @@ export default function PayBillsPage() {
               </button>
             </div>
           </form>
+
           {/* Actions */}
+
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Link
               href="/dashboard/transactions"
@@ -304,12 +389,14 @@ export default function PayBillsPage() {
             >
               View Transactions
             </Link>
+
             <Link
               href="/dashboard/notifications"
               className="rounded-xl border border-slate-300 bg-white px-6 py-3 text-center text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
               View Notifications
             </Link>
+
             <Link
               href="/dashboard"
               className="rounded-xl border border-slate-300 bg-white px-6 py-3 text-center text-sm font-semibold text-slate-700 hover:bg-slate-50"
@@ -317,7 +404,9 @@ export default function PayBillsPage() {
               Dashboard
             </Link>
           </div>
+
           {/* Notice */}
+
           <div className="mt-6 rounded-2xl border border-blue-100 bg-blue-50/80 p-5">
             <p className="text-sm leading-6 text-slate-600">
               Please review the biller and payment amount before

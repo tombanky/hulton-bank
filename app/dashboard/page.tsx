@@ -18,39 +18,56 @@ export default function DashboardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    const savedBalance = localStorage.getItem("hulton_balance");
-    const savedChecking = localStorage.getItem("hulton_checking");
-    const savedSavings = localStorage.getItem("hulton_savings");
-    const savedTransactions = localStorage.getItem("hulton_transactions");
-    const savedNotifications = localStorage.getItem("hulton_notifications");
+    try {
+      const savedBalance = localStorage.getItem("hulton_balance");
+      const savedChecking = localStorage.getItem("hulton_checking");
+      const savedSavings = localStorage.getItem("hulton_savings");
+      const savedTransactions = localStorage.getItem("hulton_transactions");
+      const savedNotifications = localStorage.getItem("hulton_notifications");
 
-    if (savedBalance) setBalance(Number(savedBalance));
-    if (savedChecking) setChecking(Number(savedChecking));
-    if (savedSavings) setSavings(Number(savedSavings));
-
-    if (savedTransactions) {
-      try {
-        setTransactions(JSON.parse(savedTransactions));
-      } catch {
-        setTransactions([]);
+      if (savedBalance !== null && Number.isFinite(Number(savedBalance))) {
+        setBalance(Number(savedBalance));
       }
-    } else {
-      setTransactions([]);
-    }
 
-    if (savedNotifications) {
-      try {
-        const parsed = JSON.parse(savedNotifications);
-        setUnreadNotifications(
-          parsed.filter(
-            (notification: { read: boolean }) => !notification.read
-          ).length
-        );
-      } catch {
-        setUnreadNotifications(0);
+      if (savedChecking !== null && Number.isFinite(Number(savedChecking))) {
+        setChecking(Number(savedChecking));
       }
+
+      if (savedSavings !== null && Number.isFinite(Number(savedSavings))) {
+        setSavings(Number(savedSavings));
+      }
+
+      if (savedTransactions) {
+        try {
+          const parsed = JSON.parse(savedTransactions);
+          setTransactions(Array.isArray(parsed) ? parsed : []);
+        } catch {
+          setTransactions([]);
+        }
+      }
+
+      if (savedNotifications) {
+        try {
+          const parsed = JSON.parse(savedNotifications);
+
+          setUnreadNotifications(
+            Array.isArray(parsed)
+              ? parsed.filter(
+                  (notification: { read?: boolean }) => !notification.read
+                ).length
+              : 0
+          );
+        } catch {
+          setUnreadNotifications(0);
+        }
+      }
+    } catch (error) {
+      console.error("Unable to load dashboard data:", error);
+    } finally {
+      setIsLoaded(true);
     }
   }, []);
 
@@ -88,19 +105,45 @@ export default function DashboardPage() {
             </Link>
 
             <nav className="hidden items-center gap-7 lg:flex">
-              <Link href="/dashboard" className="text-sm font-semibold text-blue-600">
+              <Link
+                href="/dashboard"
+                className="text-sm font-semibold text-blue-600"
+              >
                 Dashboard
               </Link>
-              <Link href="/dashboard/account-details" className="text-sm font-medium text-slate-600 hover:text-blue-600">
+
+              <Link
+                href="/dashboard/account-details"
+                className="text-sm font-medium text-slate-600 hover:text-blue-600"
+              >
                 Accounts
               </Link>
-              <Link href="/dashboard/send" className="text-sm font-medium text-slate-600 hover:text-blue-600">
+
+              <Link
+                href="/dashboard/cards"
+                className="text-sm font-medium text-slate-600 hover:text-blue-600"
+              >
+                Debit Cards
+              </Link>
+
+              <Link
+                href="/dashboard/send"
+                className="text-sm font-medium text-slate-600 hover:text-blue-600"
+              >
                 Transfers
               </Link>
-              <Link href="/dashboard/pay-bills" className="text-sm font-medium text-slate-600 hover:text-blue-600">
+
+              <Link
+                href="/dashboard/pay-bills"
+                className="text-sm font-medium text-slate-600 hover:text-blue-600"
+              >
                 Bill Pay
               </Link>
-              <Link href="/dashboard/transactions" className="text-sm font-medium text-slate-600 hover:text-blue-600">
+
+              <Link
+                href="/dashboard/transactions"
+                className="text-sm font-medium text-slate-600 hover:text-blue-600"
+              >
                 Transactions
               </Link>
             </nav>
@@ -112,6 +155,7 @@ export default function DashboardPage() {
                 className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
               >
                 <span className="text-xl">🔔</span>
+
                 {unreadNotifications > 0 && (
                   <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white ring-2 ring-white">
                     {unreadNotifications > 9 ? "9+" : unreadNotifications}
@@ -128,12 +172,14 @@ export default function DashboardPage() {
                   <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
                     AM
                   </div>
+
                   <div className="hidden text-left sm:block">
                     <p className="text-sm font-semibold text-slate-900">
                       Alicia Mahan
                     </p>
                     <p className="text-xs text-slate-500">aliciamahan</p>
                   </div>
+
                   <span className="hidden text-slate-400 sm:block">▾</span>
                 </button>
 
@@ -147,6 +193,7 @@ export default function DashboardPage() {
                         aliciamahan
                       </p>
                     </div>
+
                     <div className="p-2">
                       <Link
                         href="/dashboard/settings"
@@ -155,6 +202,7 @@ export default function DashboardPage() {
                       >
                         Profile &amp; Settings
                       </Link>
+
                       <Link
                         href="/dashboard/settings"
                         onClick={() => setProfileOpen(false)}
@@ -162,6 +210,7 @@ export default function DashboardPage() {
                       >
                         Account Details
                       </Link>
+
                       <Link
                         href="/dashboard/transactions"
                         onClick={() => setProfileOpen(false)}
@@ -169,18 +218,21 @@ export default function DashboardPage() {
                       >
                         Transaction History
                       </Link>
+
                       <Link
                         href="/dashboard/notifications"
                         onClick={() => setProfileOpen(false)}
                         className="flex items-center justify-between rounded-xl px-3 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
                       >
                         <span>Notifications</span>
+
                         {unreadNotifications > 0 && (
                           <span className="rounded-full bg-red-100 px-2 py-1 text-[10px] font-bold text-red-600">
                             {unreadNotifications} new
                           </span>
                         )}
                       </Link>
+
                       <button
                         type="button"
                         onClick={() => {
@@ -199,22 +251,52 @@ export default function DashboardPage() {
           </div>
 
           <nav className="flex gap-5 overflow-x-auto pb-4 lg:hidden">
-            <Link href="/dashboard" className="whitespace-nowrap text-sm font-semibold text-blue-600">
+            <Link
+              href="/dashboard"
+              className="whitespace-nowrap text-sm font-semibold text-blue-600"
+            >
               Dashboard
             </Link>
-            <Link href="/dashboard/account-details" className="whitespace-nowrap text-sm font-medium text-slate-600">
+
+            <Link
+              href="/dashboard/account-details"
+              className="whitespace-nowrap text-sm font-medium text-slate-600"
+            >
               Accounts
             </Link>
-            <Link href="/dashboard/send" className="whitespace-nowrap text-sm font-medium text-slate-600">
+
+            <Link
+              href="/dashboard/cards"
+              className="whitespace-nowrap text-sm font-medium text-slate-600"
+            >
+              Debit Cards
+            </Link>
+
+            <Link
+              href="/dashboard/send"
+              className="whitespace-nowrap text-sm font-medium text-slate-600"
+            >
               Transfers
             </Link>
-            <Link href="/dashboard/pay-bills" className="whitespace-nowrap text-sm font-medium text-slate-600">
+
+            <Link
+              href="/dashboard/pay-bills"
+              className="whitespace-nowrap text-sm font-medium text-slate-600"
+            >
               Bill Pay
             </Link>
-            <Link href="/dashboard/transactions" className="whitespace-nowrap text-sm font-medium text-slate-600">
+
+            <Link
+              href="/dashboard/transactions"
+              className="whitespace-nowrap text-sm font-medium text-slate-600"
+            >
               Transactions
             </Link>
-            <Link href="/dashboard/settings" className="whitespace-nowrap text-sm font-medium text-slate-600">
+
+            <Link
+              href="/dashboard/settings"
+              className="whitespace-nowrap text-sm font-medium text-slate-600"
+            >
               Settings
             </Link>
           </nav>
@@ -230,9 +312,11 @@ export default function DashboardPage() {
             <p className="text-sm font-semibold text-blue-600">
               Personal Banking
             </p>
+
             <h1 className="mt-1 text-3xl font-bold text-slate-900">
               Welcome back, Alicia
             </h1>
+
             <p className="mt-2 text-slate-600">
               Here&apos;s your account overview.
             </p>
@@ -242,9 +326,13 @@ export default function DashboardPage() {
             <p className="text-sm font-medium text-slate-300">
               Total Available Balance
             </p>
+
             <p className="mt-3 text-4xl font-bold">
-              ${formatMoney(balance)}
+              <span className={isLoaded ? "opacity-100" : "opacity-0"}>
+                ${formatMoney(balance)}
+              </span>
             </p>
+
             <p className="mt-2 text-sm text-slate-400">
               Across your Hulton Bank accounts
             </p>
@@ -254,36 +342,52 @@ export default function DashboardPage() {
             <div className="rounded-3xl border border-white/70 bg-white/95 p-7 shadow-lg backdrop-blur-sm">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-blue-600">Checking</p>
+                  <p className="text-sm font-semibold text-blue-600">
+                    Checking
+                  </p>
+
                   <h2 className="mt-1 text-xl font-bold text-slate-900">
                     Everyday Checking
                   </h2>
                 </div>
+
                 <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
                   Active
                 </span>
               </div>
+
               <p className="mt-7 text-3xl font-bold text-slate-900">
-                ${formatMoney(checking)}
+                <span className={isLoaded ? "opacity-100" : "opacity-0"}>
+                  ${formatMoney(checking)}
+                </span>
               </p>
+
               <p className="mt-2 text-sm text-slate-500">•••• 4821</p>
             </div>
 
             <div className="rounded-3xl border border-white/70 bg-white/95 p-7 shadow-lg backdrop-blur-sm">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-indigo-600">Savings</p>
+                  <p className="text-sm font-semibold text-indigo-600">
+                    Savings
+                  </p>
+
                   <h2 className="mt-1 text-xl font-bold text-slate-900">
                     Savings
                   </h2>
                 </div>
+
                 <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
                   Active
                 </span>
               </div>
+
               <p className="mt-7 text-3xl font-bold text-slate-900">
-                ${formatMoney(savings)}
+                <span className={isLoaded ? "opacity-100" : "opacity-0"}>
+                  ${formatMoney(savings)}
+                </span>
               </p>
+
               <p className="mt-2 text-sm text-slate-500">•••• 9137</p>
             </div>
           </div>
@@ -293,6 +397,7 @@ export default function DashboardPage() {
               <h2 className="text-xl font-bold text-slate-900">
                 Financial Overview
               </h2>
+
               <p className="mt-1 text-sm text-slate-500">
                 A quick look at your recent activity.
               </p>
@@ -301,26 +406,40 @@ export default function DashboardPage() {
             <div className="grid gap-5 md:grid-cols-3">
               <div className="rounded-2xl border border-white/70 bg-white/95 p-6 shadow-lg">
                 <p className="text-sm font-medium text-slate-500">Income</p>
+
                 <p className="mt-3 text-2xl font-bold text-green-600">
                   +${formatMoney(totalIncome)}
                 </p>
-                <p className="mt-1 text-xs text-slate-400">Money received</p>
+
+                <p className="mt-1 text-xs text-slate-400">
+                  Money received
+                </p>
               </div>
+
               <div className="rounded-2xl border border-white/70 bg-white/95 p-6 shadow-lg">
                 <p className="text-sm font-medium text-slate-500">Spending</p>
+
                 <p className="mt-3 text-2xl font-bold text-red-600">
                   -${formatMoney(totalSpent)}
                 </p>
+
                 <p className="mt-1 text-xs text-slate-400">Money spent</p>
               </div>
+
               <div className="rounded-2xl border border-white/70 bg-white/95 p-6 shadow-lg">
                 <p className="text-sm font-medium text-slate-500">
                   Savings Balance
                 </p>
+
                 <p className="mt-3 text-2xl font-bold text-slate-900">
-                  ${formatMoney(savings)}
+                  <span className={isLoaded ? "opacity-100" : "opacity-0"}>
+                    ${formatMoney(savings)}
+                  </span>
                 </p>
-                <p className="mt-1 text-xs text-slate-400">Current savings</p>
+
+                <p className="mt-1 text-xs text-slate-400">
+                  Current savings
+                </p>
               </div>
             </div>
 
@@ -330,14 +449,17 @@ export default function DashboardPage() {
                   <p className="font-semibold text-slate-900">
                     Spending Activity
                   </p>
+
                   <p className="mt-1 text-sm text-slate-500">
                     Spending compared with recorded income
                   </p>
                 </div>
+
                 <span className="text-sm font-bold text-slate-700">
                   {spendingPercentage.toFixed(0)}%
                 </span>
               </div>
+
               <div className="mt-5 h-3 overflow-hidden rounded-full bg-slate-100">
                 <div
                   className="h-full rounded-full bg-blue-600 transition-all"
@@ -348,15 +470,25 @@ export default function DashboardPage() {
           </div>
 
           <div className="mt-8">
-            <h2 className="text-xl font-bold text-slate-900">Quick Actions</h2>
-            <div className="mt-4 grid gap-4 md:grid-cols-3">
-              <Link href="/dashboard/send" className="rounded-2xl bg-blue-600 p-5 text-white shadow-lg transition hover:bg-blue-700">
+            <h2 className="text-xl font-bold text-slate-900">
+              Quick Actions
+            </h2>
+
+            <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <Link
+                href="/dashboard/send"
+                className="rounded-2xl bg-blue-600 p-5 text-white shadow-lg transition hover:bg-blue-700"
+              >
                 <p className="text-lg font-bold">Send Money</p>
                 <p className="mt-1 text-sm text-blue-100">
                   Send money to a recipient
                 </p>
               </Link>
-              <Link href="/dashboard/send" className="rounded-2xl border border-white/70 bg-white/95 p-5 shadow-lg transition hover:bg-slate-50">
+
+              <Link
+                href="/dashboard/send"
+                className="rounded-2xl border border-white/70 bg-white/95 p-5 shadow-lg transition hover:bg-slate-50"
+              >
                 <p className="text-lg font-bold text-slate-900">
                   Transfer Money
                 </p>
@@ -364,10 +496,26 @@ export default function DashboardPage() {
                   Move money between accounts
                 </p>
               </Link>
-              <Link href="/dashboard/pay-bills" className="rounded-2xl border border-white/70 bg-white/95 p-5 shadow-lg transition hover:bg-slate-50">
-                <p className="text-lg font-bold text-slate-900">Pay a Bill</p>
+
+              <Link
+                href="/dashboard/pay-bills"
+                className="rounded-2xl border border-white/70 bg-white/95 p-5 shadow-lg transition hover:bg-slate-50"
+              >
+                <p className="text-lg font-bold text-slate-900">
+                  Pay a Bill
+                </p>
                 <p className="mt-1 text-sm text-slate-500">
                   Pay your bills and expenses
+                </p>
+              </Link>
+
+              <Link
+                href="/dashboard/cards"
+                className="rounded-2xl border border-white/70 bg-white/95 p-5 shadow-lg transition hover:bg-slate-50"
+              >
+                <p className="text-lg font-bold text-slate-900">Debit Cards</p>
+                <p className="mt-1 text-sm text-slate-500">
+                  Apply for and manage your debit card
                 </p>
               </Link>
             </div>
@@ -379,11 +527,16 @@ export default function DashboardPage() {
                 <h2 className="text-lg font-bold text-slate-900">
                   Recent Transactions
                 </h2>
+
                 <p className="mt-1 text-sm text-slate-500">
                   Your latest account activity
                 </p>
               </div>
-              <Link href="/dashboard/transactions" className="text-sm font-semibold text-blue-600 hover:text-blue-700">
+
+              <Link
+                href="/dashboard/transactions"
+                className="text-sm font-semibold text-blue-600 hover:text-blue-700"
+              >
                 View All
               </Link>
             </div>
@@ -404,15 +557,18 @@ export default function DashboardPage() {
                     >
                       {transaction.type === "credit" ? "↑" : "↓"}
                     </div>
+
                     <div>
                       <p className="font-semibold text-slate-900">
                         {transaction.title}
                       </p>
+
                       <p className="mt-1 text-xs text-slate-500">
                         {transaction.date}
                       </p>
                     </div>
                   </div>
+
                   <p
                     className={`font-bold ${
                       transaction.type === "credit"
@@ -425,6 +581,12 @@ export default function DashboardPage() {
                   </p>
                 </div>
               ))}
+
+              {transactions.length === 0 && (
+                <p className="px-6 py-8 text-center text-sm text-slate-500">
+                  No transactions to display.
+                </p>
+              )}
             </div>
           </div>
         </section>

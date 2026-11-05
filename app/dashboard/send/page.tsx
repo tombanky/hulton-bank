@@ -1,7 +1,10 @@
 "use client";
+
 import { FormEvent, useState } from "react";
 import Link from "next/link";
+
 type TransferMethod = "bank" | "zelle";
+
 type Notification = {
   id: number;
   title: string;
@@ -10,6 +13,15 @@ type Notification = {
   type: "deposit" | "transfer" | "bill" | "security";
   read: boolean;
 };
+
+type Transaction = {
+  title: string;
+  date: string;
+  amount: number;
+  type: "credit" | "debit";
+  description?: string;
+};
+
 const banks = [
   "Hulton Bank",
   "Navy Federal Credit Union",
@@ -66,9 +78,11 @@ const banks = [
   "Trustmark National Bank",
   "Cathay Bank",
 ];
+
 export default function SendMoneyPage() {
   const [method, setMethod] =
     useState<TransferMethod>("bank");
+
   const [recipient, setRecipient] = useState("");
   const [bank, setBank] = useState("");
   const [routingNumber, setRoutingNumber] = useState("");
@@ -79,84 +93,112 @@ export default function SendMoneyPage() {
   const [description, setDescription] = useState("");
   const [message, setMessage] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
+
   const formatMoney = (value: number) =>
     value.toLocaleString("en-US", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
     setMessage("");
     setIsSuccess(false);
+
     const transferAmount = Number(amount);
+
     if (!recipient.trim()) {
       setMessage("Please enter the recipient name.");
       return;
     }
-    if (!amount || transferAmount <= 0) {
+
+    if (!amount || !Number.isFinite(transferAmount) || transferAmount <= 0) {
       setMessage("Please enter a valid amount.");
       return;
     }
+
     if (method === "bank") {
       if (!bank) {
         setMessage("Please select the recipient's bank.");
         return;
       }
+
       if (!/^\d{9}$/.test(routingNumber)) {
-        setMessage(
-          "Routing number must contain exactly 9 digits."
-        );
+        setMessage("Routing number must contain exactly 9 digits.");
         return;
       }
+
       if (!/^\d{10}$/.test(accountNumber)) {
-        setMessage(
-          "Account number must contain exactly 10 digits."
-        );
+        setMessage("Account number must contain exactly 10 digits.");
         return;
       }
+
       if (!accountType) {
         setMessage("Please select the account type.");
         return;
       }
     }
+
     if (method === "zelle" && !zelleContact.trim()) {
       setMessage(
         "Please enter the recipient's Zelle email or mobile number."
       );
       return;
     }
+
+    // Consistent  starting balances.
     const currentBalance = Number(
-      localStorage.getItem("hulton_balance") || "300000"
+      localStorage.getItem("hulton_balance") ?? "400000"
     );
+
     const currentChecking = Number(
-      localStorage.getItem("hulton_checking") || "250000"
+      localStorage.getItem("hulton_checking") ?? "350000"
     );
+
     const currentSavings = Number(
-      localStorage.getItem("hulton_savings") || "50000"
+      localStorage.getItem("hulton_savings") ?? "50000"
     );
+
+    if (
+      !Number.isFinite(currentBalance) ||
+      !Number.isFinite(currentChecking) ||
+      !Number.isFinite(currentSavings)
+    ) {
+      setMessage("Unable to read the  account balances.");
+      return;
+    }
+
     if (transferAmount > currentChecking) {
       setMessage(
         "This payment exceeds your available checking balance."
       );
       return;
     }
+
     const newBalance = currentBalance - transferAmount;
     const newChecking = currentChecking - transferAmount;
-    const savedTransactions =
-      localStorage.getItem("hulton_transactions");
-    let transactions = [];
-    if (savedTransactions) {
-      try {
-        transactions = JSON.parse(savedTransactions);
-      } catch {
-        transactions = [];
-      }
+
+    let transactions: Transaction[] = [];
+
+    try {
+      const savedTransactions = localStorage.getItem(
+        "hulton_transactions"
+      );
+
+      transactions = savedTransactions
+        ? JSON.parse(savedTransactions)
+        : [];
+    } catch {
+      transactions = [];
     }
+
     const transferTitle =
       method === "zelle"
-        ? `Zelle to ${recipient}`
-        : `Transfer to ${recipient}`;
-    const newTransaction = {
+        ? `Zelle  to ${recipient}`
+        : `Transfer  to ${recipient}`;
+
+    const newTransaction: Transaction = {
       title: transferTitle,
       date: "Today",
       amount: transferAmount,
@@ -164,77 +206,78 @@ export default function SendMoneyPage() {
       description:
         description.trim() ||
         (method === "zelle"
-          ? "Zelle payment"
-          : `Bank transfer to ${bank}`),
+          ? " Zelle payment"
+          : ` bank transfer to ${bank}`),
     };
+
     const updatedTransactions = [
       newTransaction,
       ...transactions,
     ];
+
+    // Save the updated  balances.
     localStorage.setItem(
       "hulton_balance",
       newBalance.toString()
     );
+
     localStorage.setItem(
       "hulton_checking",
       newChecking.toString()
     );
+
     localStorage.setItem(
       "hulton_savings",
       currentSavings.toString()
     );
+
     localStorage.setItem(
       "hulton_transactions",
       JSON.stringify(updatedTransactions)
     );
-    /* Create notification */
-    const savedNotifications = localStorage.getItem(
-      "hulton_notifications"
-    );
+
+    // Create  notification.
     let notifications: Notification[] = [];
-    if (savedNotifications) {
-      try {
-        notifications = JSON.parse(savedNotifications);
-      } catch {
-        notifications = [];
-      }
+
+    try {
+      const savedNotifications = localStorage.getItem(
+        "hulton_notifications"
+      );
+
+      notifications = savedNotifications
+        ? JSON.parse(savedNotifications)
+        : [];
+    } catch {
+      notifications = [];
     }
+
     const newNotification: Notification = {
       id: Date.now(),
-      title:
-        method === "zelle"
-          ? "Zelle payment sent"
-          : "Transfer submitted",
-      message:
-        method === "zelle"
-          ? `A Zelle payment of $${formatMoney(
-              transferAmount
-            )} was sent to ${recipient}.`
-          : `A transfer of $${formatMoney(
-              transferAmount
-            )} was submitted to ${recipient}.`,
+      title: " payment recorded",
+      message: `A  payment of $${formatMoney(
+        transferAmount
+      )} was recorded for ${recipient}. No money was sent.`,
       date: "Just now",
       type: "transfer",
       read: false,
     };
-    const updatedNotifications = [
-      newNotification,
-      ...notifications,
-    ];
+
     localStorage.setItem(
       "hulton_notifications",
-      JSON.stringify(updatedNotifications)
+      JSON.stringify([
+        newNotification,
+        ...notifications,
+      ])
     );
+
     setIsSuccess(true);
+
     setMessage(
-      method === "zelle"
-        ? `Zelle payment of $${formatMoney(
-            transferAmount
-          )} was submitted successfully.`
-        : `Transfer of $${formatMoney(
-            transferAmount
-          )} was submitted successfully.`
+      ` payment of $${formatMoney(
+        transferAmount
+      )} recorded successfully. No money was transferred.`
     );
+
     setRecipient("");
     setBank("");
     setRoutingNumber("");
@@ -244,6 +287,7 @@ export default function SendMoneyPage() {
     setAmount("");
     setDescription("");
   };
+
   return (
     <main className="min-h-screen bg-slate-100">
       {/* Header */}
@@ -257,10 +301,12 @@ export default function SendMoneyPage() {
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-lg font-bold text-white shadow-sm">
                 H
               </div>
+
               <span className="text-xl font-bold text-slate-900">
                 Hulton Bank
               </span>
             </Link>
+
             <Link
               href="/dashboard"
               className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
@@ -270,23 +316,34 @@ export default function SendMoneyPage() {
           </div>
         </div>
       </header>
+
       {/* Main */}
       <div className="relative min-h-[calc(100vh-80px)] overflow-hidden">
         <div className="pointer-events-none absolute -left-32 top-20 h-96 w-96 rounded-full bg-blue-200/40 blur-3xl" />
+
         <div className="pointer-events-none absolute -right-32 top-10 h-[500px] w-[500px] rounded-full bg-indigo-200/40 blur-3xl" />
+
         <section className="relative mx-auto max-w-4xl px-6 py-10">
           {/* Heading */}
           <div className="mb-8">
             <p className="text-sm font-semibold text-blue-600">
               Personal Banking
             </p>
+
             <h1 className="mt-1 text-3xl font-bold text-slate-900">
               Send Money
             </h1>
+
             <p className="mt-2 text-slate-600">
-              Send money securely from your account.
+              Record a  payment from your account.
             </p>
           </div>
+
+          {/*  notice */}
+          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
+             
+          </div>
+
           {/* Method Selector */}
           <div className="mb-6 rounded-2xl border border-white/70 bg-white/95 p-2 shadow-lg">
             <div className="grid grid-cols-2 gap-2">
@@ -305,6 +362,7 @@ export default function SendMoneyPage() {
               >
                 Bank Transfer
               </button>
+
               <button
                 type="button"
                 onClick={() => {
@@ -322,6 +380,7 @@ export default function SendMoneyPage() {
               </button>
             </div>
           </div>
+
           {/* Form */}
           <form
             onSubmit={handleSubmit}
@@ -333,6 +392,7 @@ export default function SendMoneyPage() {
                 <label className="mb-2 block text-sm font-semibold text-slate-700">
                   Recipient Name
                 </label>
+
                 <input
                   type="text"
                   value={recipient}
@@ -343,6 +403,7 @@ export default function SendMoneyPage() {
                   className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 />
               </div>
+
               {/* Bank Transfer Fields */}
               {method === "bank" && (
                 <>
@@ -350,6 +411,7 @@ export default function SendMoneyPage() {
                     <label className="mb-2 block text-sm font-semibold text-slate-700">
                       Recipient&apos;s Bank
                     </label>
+
                     <select
                       value={bank}
                       onChange={(event) =>
@@ -360,6 +422,7 @@ export default function SendMoneyPage() {
                       <option value="">
                         Select recipient&apos;s bank
                       </option>
+
                       {banks.map((bankName) => (
                         <option
                           key={bankName}
@@ -370,11 +433,13 @@ export default function SendMoneyPage() {
                       ))}
                     </select>
                   </div>
+
                   <div className="grid gap-5 md:grid-cols-2">
                     <div>
                       <label className="mb-2 block text-sm font-semibold text-slate-700">
-                        Routing Number
+                        Test Routing Number
                       </label>
+
                       <input
                         type="text"
                         inputMode="numeric"
@@ -382,20 +447,19 @@ export default function SendMoneyPage() {
                         value={routingNumber}
                         onChange={(event) =>
                           setRoutingNumber(
-                            event.target.value.replace(
-                              /\D/g,
-                              ""
-                            )
+                            event.target.value.replace(/\D/g, "")
                           )
                         }
-                        placeholder="9-digit routing number"
+                        placeholder="9-digit test number"
                         className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                       />
                     </div>
+
                     <div>
                       <label className="mb-2 block text-sm font-semibold text-slate-700">
-                        Account Number
+                        Test Account Number
                       </label>
+
                       <input
                         type="text"
                         inputMode="numeric"
@@ -403,21 +467,20 @@ export default function SendMoneyPage() {
                         value={accountNumber}
                         onChange={(event) =>
                           setAccountNumber(
-                            event.target.value.replace(
-                              /\D/g,
-                              ""
-                            )
+                            event.target.value.replace(/\D/g, "")
                           )
                         }
-                        placeholder="10-digit account number"
+                        placeholder="10-digit test number"
                         className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                       />
                     </div>
                   </div>
+
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-slate-700">
                       Account Type
                     </label>
+
                     <select
                       value={accountType}
                       onChange={(event) =>
@@ -428,9 +491,11 @@ export default function SendMoneyPage() {
                       <option value="">
                         Select account type
                       </option>
+
                       <option value="Checking">
                         Checking
                       </option>
+
                       <option value="Savings">
                         Savings
                       </option>
@@ -438,32 +503,37 @@ export default function SendMoneyPage() {
                   </div>
                 </>
               )}
+
               {/* Zelle */}
               {method === "zelle" && (
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-slate-700">
-                    Zelle Email or Mobile Number
+                    Test Zelle Email or Mobile Number
                   </label>
+
                   <input
                     type="text"
                     value={zelleContact}
                     onChange={(event) =>
                       setZelleContact(event.target.value)
                     }
-                    placeholder="Enter email or mobile number"
+                    placeholder="Enter test email or number"
                     className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
               )}
+
               {/* Amount */}
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-700">
                   Amount
                 </label>
+
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 font-semibold text-slate-500">
                     $
                   </span>
+
                   <input
                     type="number"
                     min="0.01"
@@ -477,6 +547,7 @@ export default function SendMoneyPage() {
                   />
                 </div>
               </div>
+
               {/* Description */}
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-700">
@@ -485,6 +556,7 @@ export default function SendMoneyPage() {
                     (optional)
                   </span>
                 </label>
+
                 <textarea
                   value={description}
                   onChange={(event) =>
@@ -495,6 +567,7 @@ export default function SendMoneyPage() {
                   className="w-full resize-none rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 />
               </div>
+
               {/* Message */}
               {message && (
                 <div
@@ -507,24 +580,26 @@ export default function SendMoneyPage() {
                   {message}
                 </div>
               )}
+
               {/* Submit */}
               <button
                 type="submit"
                 className="w-full rounded-xl bg-blue-600 px-6 py-4 font-semibold text-white shadow-md transition hover:bg-blue-700"
               >
                 {method === "zelle"
-                  ? "Send with Zelle"
-                  : "Send Money"}
+                  ? "Record Zelle "
+                  : "Record "}
               </button>
             </div>
           </form>
+
           {/* Notice */}
           <div className="mt-6 rounded-2xl border border-blue-100 bg-blue-50/80 p-5">
             <p className="text-sm leading-6 text-slate-600">
-              Please review recipient details carefully before
-              submitting a payment.
+              
             </p>
           </div>
+
           {/* Back Links */}
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Link
@@ -533,12 +608,14 @@ export default function SendMoneyPage() {
             >
               View Transactions
             </Link>
+
             <Link
               href="/dashboard/notifications"
               className="rounded-xl border border-slate-300 bg-white px-6 py-3 text-center text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
               View Notifications
             </Link>
+
             <Link
               href="/dashboard"
               className="rounded-xl border border-slate-300 bg-white px-6 py-3 text-center text-sm font-semibold text-slate-700 hover:bg-slate-50"
