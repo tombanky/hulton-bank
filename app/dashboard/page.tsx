@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { auth, db } from "@/app/lib/firebase";
+import { doc, onSnapshot } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
 
 type Transaction = {
   title: string;
@@ -70,6 +73,47 @@ export default function DashboardPage() {
       setIsLoaded(true);
     }
   }, []);
+useEffect(() => {
+  let unsubscribeAccount: (() => void) | undefined;
+
+  const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+    unsubscribeAccount?.();
+
+    if (!user) return;
+
+    const accountRef = doc(db, "accounts", user.uid);
+
+    unsubscribeAccount = onSnapshot(
+      accountRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+console.log("Firestore account loaded successfully:", data);
+
+          if (typeof data.simulatedBalance === "number") {
+            setBalance(data.simulatedBalance);
+          }
+
+          if (typeof data.checking === "number") {
+            setChecking(data.checking);
+          }
+
+          if (typeof data.savings === "number") {
+            setSavings(data.savings);
+          }
+        }
+      },
+      (error) => {
+        console.error("Unable to load account:", error);
+      }
+    );
+  });
+
+  return () => {
+    unsubscribeAuth();
+    unsubscribeAccount?.();
+  };
+}, []);
 
   const formatMoney = (amount: number) =>
     amount.toLocaleString("en-US", {
