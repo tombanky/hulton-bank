@@ -73,47 +73,48 @@ export default function DashboardPage() {
       setIsLoaded(true);
     }
   }, []);
-useEffect(() => {
-  let unsubscribeAccount: (() => void) | undefined;
 
-  const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-    unsubscribeAccount?.();
+  useEffect(() => {
+    let unsubscribeAccount: (() => void) | undefined;
 
-    if (!user) return;
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      unsubscribeAccount?.();
 
-    const accountRef = doc(db, "accounts", user.uid);
+      if (!user) return;
 
-    unsubscribeAccount = onSnapshot(
-      accountRef,
-      (snapshot) => {
-        if (snapshot.exists()) {
-          const data = snapshot.data();
-console.log("Firestore account loaded successfully:", data);
+      const accountRef = doc(db, "accounts", user.uid);
 
-          if (typeof data.simulatedBalance === "number") {
-            setBalance(data.simulatedBalance);
+      unsubscribeAccount = onSnapshot(
+        accountRef,
+        (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.data();
+            console.log("Firestore account loaded successfully:", data);
+
+            if (typeof data.simulatedBalance === "number") {
+              setBalance(data.simulatedBalance);
+            }
+
+            if (typeof data.checking === "number") {
+              setChecking(data.checking);
+            }
+
+            if (typeof data.savings === "number") {
+              setSavings(data.savings);
+            }
           }
-
-          if (typeof data.checking === "number") {
-            setChecking(data.checking);
-          }
-
-          if (typeof data.savings === "number") {
-            setSavings(data.savings);
-          }
+        },
+        (error) => {
+          console.error("Unable to load account:", error);
         }
-      },
-      (error) => {
-        console.error("Unable to load account:", error);
-      }
-    );
-  });
+      );
+    });
 
-  return () => {
-    unsubscribeAuth();
-    unsubscribeAccount?.();
-  };
-}, []);
+    return () => {
+      unsubscribeAuth();
+      unsubscribeAccount?.();
+    };
+  }, []);
 
   const formatMoney = (amount: number) =>
     amount.toLocaleString("en-US", {
@@ -168,6 +169,13 @@ console.log("Firestore account loaded successfully:", data);
                 className="text-sm font-medium text-slate-600 hover:text-blue-600"
               >
                 Debit Cards
+              </Link>
+
+              <Link
+                href="/dashboard/card-tracking"
+                className="text-sm font-medium text-slate-600 hover:text-blue-600"
+              >
+                Track My Card
               </Link>
 
               <Link
@@ -314,6 +322,13 @@ console.log("Firestore account loaded successfully:", data);
               className="whitespace-nowrap text-sm font-medium text-slate-600"
             >
               Debit Cards
+            </Link>
+
+            <Link
+              href="/dashboard/card-tracking"
+              className="whitespace-nowrap text-sm font-medium text-slate-600"
+            >
+              Track My Card
             </Link>
 
             <Link
@@ -560,6 +575,18 @@ console.log("Firestore account loaded successfully:", data);
                 <p className="text-lg font-bold text-slate-900">Debit Cards</p>
                 <p className="mt-1 text-sm text-slate-500">
                   Apply for and manage your debit card
+                </p>
+              </Link>
+
+              <Link
+                href="/dashboard/card-tracking"
+                className="rounded-2xl border border-white/70 bg-white/95 p-5 shadow-lg transition hover:bg-slate-50"
+              >
+                <p className="text-lg font-bold text-slate-900">
+                  Track My Card
+                </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  Check your debit card delivery progress
                 </p>
               </Link>
             </div>
